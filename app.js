@@ -2,6 +2,9 @@ const profiles = [
   {
     name:"Maya", age:27, job:"Brand strategist", mbti:"ENFP",
     interests:["Live music","Travel","Photography"],
+    // matchChance simulates whether this person swipes back on you —
+    // in a real app this would be their actual like/pass action.
+    matchChance:0.45,
     prompts:[
       ["A perfect Sunday","Coffee, a long walk, then finding a tiny gig nobody told us about."],
       ["Green flag","Someone who is genuinely curious about things."]
@@ -10,6 +13,7 @@ const profiles = [
   {
     name:"Rhea", age:26, job:"Product designer", mbti:"INFJ",
     interests:["Design","Cooking","Books"],
+    matchChance:0.85,
     prompts:[
       ["Two truths and a lie","I can make excellent ramen. I hate cilantro. I've never owned a plant."],
       ["I'll fall for you if","You notice the small things."]
@@ -18,6 +22,7 @@ const profiles = [
   {
     name:"Anika", age:28, job:"Researcher", mbti:"INTP",
     interests:["Drums","Science","Indie music"],
+    matchChance:0.85,
     prompts:[
       ["A niche thing I love","Watching someone learn a song on drums from scratch."],
       ["Most controversial opinion","The best conversations start with an oddly specific question."]
@@ -30,7 +35,7 @@ const seededChats = {
     messages:[
       ["them","Okay, serious question: what's the last song you learned?"],
       ["me","Everlong. Took me way too long to get the fills clean."],
-      ["them","That's a respectable answer ðŸ˜‚"]
+      ["them","That's a respectable answer 😂"]
     ]
   },
   Rhea: {
@@ -48,7 +53,9 @@ const state = {
   onboarded: localStorage.getItem("onboarded") === "1",
   coach: localStorage.getItem("coach") === "1",
   profile: JSON.parse(localStorage.getItem("profile") || "null"),
-  likes: JSON.parse(localStorage.getItem("likes") || "[]")
+  likes: JSON.parse(localStorage.getItem("likes") || "[]"),
+  // names you've mutually matched with — this, not `likes`, drives the Chats tab
+  matches: JSON.parse(localStorage.getItem("matches") || "[]")
 };
 
 function save(){
@@ -58,6 +65,7 @@ function save(){
   localStorage.setItem("coach",state.coach?"1":"0");
   localStorage.setItem("profile",JSON.stringify(state.profile));
   localStorage.setItem("likes",JSON.stringify(state.likes));
+  localStorage.setItem("matches",JSON.stringify(state.matches));
 }
 
 function esc(s){
@@ -75,7 +83,7 @@ function shell(content){
 }
 
 function nav(){
-  const items=[["discover","Discover","â™¡"],["chats","Chats","â—Œ"],["insights","Insights","â—ˆ"],["profile","Profile","â—‹"]];
+  const items=[["discover","Discover","♡"],["chats","Chats","◌"],["insights","Insights","◈"],["profile","Profile","○"]];
   return `<nav class="nav">${items.map(([id,label,icon])=>
     `<button class="${state.tab===id?"active":""}" onclick="setTab('${id}')"><div>${icon}</div>${label}</button>`
   ).join("")}</nav>`;
@@ -92,7 +100,7 @@ function render(){
 }
 
 /* =====================================================================
-   ONBOARDING â€” multi-step wizard
+   ONBOARDING — multi-step wizard
    Steps: basics -> photos -> prompts -> mbti -> review -> (modal) -> done
    ===================================================================== */
 
@@ -219,7 +227,7 @@ function renderObBasics(){
   document.getElementById("app").innerHTML = obShell(`
     <div class="eyebrow">Step 1 of 4</div>
     <h1>Let's start with the basics.</h1>
-    <p>This is what people see first. Keep it honest â€” the rest of your profile will do the interesting work.</p>
+    <p>This is what people see first. Keep it honest — the rest of your profile will do the interesting work.</p>
     <div class="card">
       <div class="field"><label>First name</label>
         <input id="ob-name" value="${esc(ob.name)}" placeholder="What should we call you?">
@@ -258,7 +266,7 @@ function renderObPhotos(){
   document.getElementById("app").innerHTML = obShell(`
     <div class="eyebrow">Step 2 of 4</div>
     <h1>Add your photos.</h1>
-    <p>Add 2â€“6 photos. Drag to reorder â€” your first photo is what people see first in the stack.</p>
+    <p>Add 2–6 photos. Drag to reorder — your first photo is what people see first in the stack.</p>
     <div class="card">
       <div class="ob-photo-grid" id="ob-photo-grid"></div>
       <div class="small">Tap an empty tile to upload. Drag a filled tile to reorder.</div>
@@ -396,10 +404,10 @@ function renderObMbti(){
   document.getElementById("app").innerHTML = obShell(`
     <div class="eyebrow">Step 4 of 4</div>
     <h1>Take the personality assessment.</h1>
-    <p>28 quick questions. For each pair, slide toward whichever statement sounds more like you â€” there's no right answer.</p>
+    <p>28 quick questions. For each pair, slide toward whichever statement sounds more like you — there's no right answer.</p>
     <div class="small" id="ob-mbti-progress">${Object.keys(ob.mbtiAnswers).length} of ${MBTI_QUESTIONS.length} answered</div>
     <div id="ob-mbti-questions"></div>
-    <div class="small ob-error" id="ob-mbti-error">Answer every question to see your result â€” a few are still blank.</div>
+    <div class="small ob-error" id="ob-mbti-error">Answer every question to see your result — a few are still blank.</div>
     <div class="actions">
       <button class="btn" onclick="obBack()">Back</button>
       <button class="btn primary" onclick="obNextMbti()">See my result</button>
@@ -492,7 +500,7 @@ function obFinish(){
   const overlay = document.createElement("div");
   overlay.className = "ob-modal-overlay";
   overlay.innerHTML = `<div class="ob-modal-card">
-    <div class="ob-modal-check">âœ“</div>
+    <div class="ob-modal-check">✓</div>
     <div class="ob-modal-eyebrow">Profile saved</div>
     <div class="ob-modal-type">${ob.mbtiResult.code}</div>
     <p class="ob-modal-headline">${esc(obTypeHeadline())}</p>
@@ -518,7 +526,7 @@ function completeOnboarding(){
     mbtiAxes: ob.mbtiResult.axes
   };
   state.onboarded = true;
-  state.tab = "discover"; // lands the person on the main app â€” Discover, with Chats/Insights/Profile in the nav
+  state.tab = "discover"; // lands the person on the main app — Discover, with Chats/Insights/Profile in the nav
   save();
   render();
 }
@@ -534,7 +542,7 @@ function renderDiscover(){
     <div class="profile-card card">
       <div class="avatar">${initials(p.name)}</div>
       <div class="name">${esc(p.name)}, ${p.age}</div>
-      <div class="meta">${esc(p.job)} Â· ${p.mbti}</div>
+      <div class="meta">${esc(p.job)} · ${p.mbti}</div>
       <div class="chips">${p.interests.map(i=>`<span class="chip">${esc(i)}</span>`).join("")}</div>
       ${p.prompts.map(([q,a])=>`<div class="prompt"><b>${esc(q)}</b><p>${esc(a)}</p></div>`).join("")}
     </div>
@@ -550,26 +558,60 @@ function nextProfile(){
   state.idx=(state.idx+1)%profiles.length; save(); render();
 }
 
-function reject(){ nextProfile(); }
+function reject(){
+  // Pass never touches likes or matches — this person simply never shows up in Chats.
+  nextProfile();
+}
+
 function like(){
-  const p=profiles[state.idx % profiles.length];
+  const p = profiles[state.idx % profiles.length];
   if(!state.likes.includes(p.name)) state.likes.push(p.name);
-  save(); nextProfile();
+
+  const alreadyMatched = state.matches.includes(p.name);
+  const mutual = !alreadyMatched && Math.random() < (p.matchChance ?? 0.6);
+
+  if(mutual){
+    state.matches.push(p.name);
+    if(!seededChats[p.name]) seededChats[p.name] = { messages: [] };
+    save();
+    showMatchPopup(p); // advances to the next profile once dismissed
+    return;
+  }
+
+  save();
+  nextProfile();
+}
+
+function showMatchPopup(p){
+  const overlay = document.createElement("div");
+  overlay.className = "ob-modal-overlay";
+  overlay.innerHTML = `<div class="ob-modal-card">
+    <div class="ob-modal-check">✓</div>
+    <div class="ob-modal-eyebrow">It's a match!</div>
+    <div class="ob-modal-type" style="font-size:36px;">${esc(p.name)}</div>
+    <p class="ob-modal-headline">You liked each other. They're in your Chats now — say hi whenever you're ready.</p>
+    <button class="btn primary full" id="match-modal-done">Keep browsing</button>
+  </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById("match-modal-done").addEventListener("click", ()=>{
+    overlay.remove();
+    nextProfile();
+  });
 }
 
 function renderChats(){
-  const names=["Anika","Rhea"];
+  const names = state.matches;
   document.getElementById("app").innerHTML=shell(`
     <div class="eyebrow">Matches</div>
     <div class="list-title">Your conversations</div>
-    ${names.map(n=>{
-      const c=seededChats[n];
-      const last=c.messages[c.messages.length-1][1];
+    ${names.length ? names.map(n=>{
+      const c = seededChats[n] || { messages: [] };
+      const last = c.messages.length ? c.messages[c.messages.length-1][1] : "You matched — say hi 👋";
       return `<div class="chat-row" onclick="openChat('${n}')">
         <div class="mini-avatar">${initials(n)}</div>
         <div class="chat-copy"><div class="chat-title">${n}</div><div class="preview">${esc(last)}</div></div>
       </div>`;
-    }).join("")}
+    }).join("") : `<div class="card"><p class="muted">No matches yet. Like someone in Discover — if they like you back, they'll show up here.</p></div>`}
     <div class="card">
       <div class="eyebrow">Coach</div>
       <div style="font-weight:800">Consent-based, match-specific help</div>
@@ -578,26 +620,38 @@ function renderChats(){
   `);
 }
 
-let activeChat="Anika";
+let activeChat=null;
 
 function openChat(name){ activeChat=name; renderChat(); }
 
+// Seeded coaching content for the two scripted demo conversations, with a
+// generic fallback for any newly-matched name (e.g. Maya) that has no
+// pre-written thread yet.
+function coachInsight(name){
+  if(name==="Anika") return {
+    title:"A thread worth following",
+    body:"You tend to have more engaged conversations around music. This is already a strong thread — you could make it more specific.",
+    suggestion:"What song would you pick if you had to convince someone to start listening to your taste?"
+  };
+  if(name==="Rhea") return {
+    title:"Conversation is cooling",
+    body:"Cooking hasn't given you much to work with so far. Consider shifting toward a topic you actually enjoy.",
+    suggestion:"Okay, enough food talk — what are you currently weirdly obsessed with?"
+  };
+  return {
+    title:"Just getting started",
+    body:"Not enough messages yet for Signal to notice a pattern — keep chatting and insights will show up here.",
+    suggestion:"Hey! What's been the best part of your week so far?"
+  };
+}
+
 function renderChat(){
-  const messages=seededChats[activeChat].messages;
-  const coachCard=activeChat==="Anika"
-    ? `<div class="coach">
+  const messages = (seededChats[activeChat] || { messages: [] }).messages;
+  const insight = coachInsight(activeChat);
+  const coachCard = `<div class="coach">
         <div class="eyebrow">Signal noticed</div>
-        <div class="coach-title">A thread worth following</div>
-        <p>You tend to have more engaged conversations around music. This is already a strong thread â€” you could make it more specific.</p>
-        <div class="coach-actions">
-          <button class="btn" onclick="useSuggestion()">Try suggestion</button>
-          <button class="btn" onclick="dismissCoach()">Not now</button>
-        </div>
-      </div>`
-    : `<div class="coach">
-        <div class="eyebrow">Signal noticed</div>
-        <div class="coach-title">Conversation is cooling</div>
-        <p>Cooking hasn't given you much to work with so far. Consider shifting toward a topic you actually enjoy.</p>
+        <div class="coach-title">${esc(insight.title)}</div>
+        <p>${esc(insight.body)}</p>
         <div class="coach-actions">
           <button class="btn" onclick="useSuggestion()">Try suggestion</button>
           <button class="btn" onclick="dismissCoach()">Not now</button>
@@ -605,15 +659,17 @@ function renderChat(){
       </div>`;
 
   document.getElementById("app").innerHTML=shell(`
-    <button class="btn" onclick="setTab('chats')">â† Chats</button>
-    <div class="list-title">${activeChat}</div>
-    <div>${messages.map(([who,msg])=>`<div class="bubble ${who==="me"?"me":""}">${esc(msg)}</div>`).join("")}</div>
+    <button class="btn" onclick="setTab('chats')">← Chats</button>
+    <div class="list-title">${esc(activeChat)}</div>
+    ${messages.length
+      ? `<div>${messages.map(([who,msg])=>`<div class="bubble ${who==="me"?"me":""}">${esc(msg)}</div>`).join("")}</div>`
+      : `<p class="small">You matched with ${esc(activeChat)} — no messages yet.</p>`}
     ${state.coach?coachCard:""}
     <div class="toggle">
       <div><b>Dating coach</b><div class="small">Analyze this chat and help me communicate better</div></div>
       <button class="switch ${state.coach?"on":""}" onclick="toggleCoach()"><div class="knob"></div></button>
     </div>
-    <div class="chat-input"><input id="draft" placeholder="Write a messageâ€¦"><button class="btn primary" onclick="sendDraft()">Send</button></div>
+    <div class="chat-input"><input id="draft" placeholder="Write a message…"><button class="btn primary" onclick="sendDraft()">Send</button></div>
   `);
 }
 
@@ -622,9 +678,7 @@ function dismissCoach(){ state.coach=false; save(); renderChat(); }
 
 function useSuggestion(){
   const d=document.getElementById("draft");
-  d.value=activeChat==="Anika"
-    ? "What song would you pick if you had to convince someone to start listening to your taste?"
-    : "Okay, enough food talk â€” what are you currently weirdly obsessed with?";
+  d.value = coachInsight(activeChat).suggestion;
   d.focus();
 }
 
@@ -632,6 +686,7 @@ function sendDraft(){
   const d=document.getElementById("draft");
   const value=d.value.trim();
   if(!value)return;
+  if(!seededChats[activeChat]) seededChats[activeChat] = { messages: [] };
   seededChats[activeChat].messages.push(["me",value]);
   d.value="";
   renderChat();
@@ -642,7 +697,7 @@ function renderInsights(){
     <div class="eyebrow">Insights</div>
     <div class="hero"><h1>Your dating<br>signal.</h1><p>These are behavior-based observations from your conversations, not personality labels.</p></div>
     <div class="card">
-      <div class="stat"><span>Topic energy</span><b>Music â†‘</b></div>
+      <div class="stat"><span>Topic energy</span><b>Music ↑</b></div>
       <div class="bar"><span style="width:82%"></span></div>
       <div class="stat"><span>Conversation style</span><b>Curious, then selective</b></div>
       <div class="stat"><span>One thing to try</span><b>Share before the next question</b></div>
