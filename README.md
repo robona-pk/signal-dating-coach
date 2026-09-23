@@ -1,4 +1,4 @@
-# Signal
+# Signal (WIP)
 
 Signal is a dating app MVP built around a simple idea: help people make better connections while also learning how they communicate.
 
